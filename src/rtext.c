@@ -226,13 +226,21 @@ extern void LoadFontDefault(void)
                             5, 5, 5, 5, 5, 5, 9, 5, 5, 5, 5, 5, 2, 2, 3, 3, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 3, 5 };
 
     // Re-construct image from defaultFontData and generate OpenGL texture
+#ifdef PLATFORM_PLAYSTATION2
+#define BYTES_PER_PIXEL 4
+#define FORMAT PIXELFORMAT_UNCOMPRESSED_R8G8B8A8
+#else
+#define BYTES_PER_PIXEL 2
+#define FORMAT PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA
+#endif
+
     //----------------------------------------------------------------------
     Image imFont = {
-        .data = RL_CALLOC(128*128, 2),  // 2 bytes per pixel (gray + alpha)
+        .data = RL_CALLOC(128*128, BYTES_PER_PIXEL),
         .width = 128,
         .height = 128,
         .mipmaps = 1,
-        .format = PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA
+        .format = FORMAT
     };
 
     // Fill image.data with defaultFontData (convert from bit to pixel!)
@@ -242,14 +250,22 @@ extern void LoadFontDefault(void)
         {
             if (BIT_CHECK(defaultFontData[counter], j))
             {
+                // considering data as little-endian
+#if BYTES_PER_PIXEL == 2
                 // NOTE: Unreferencing data as short, so,
-                // considering data as little-endian (alpha + gray)
                 ((unsigned short *)imFont.data)[i + j] = 0xffff;
+#else
+                ((unsigned int*)imFont.data)[i+j]=0xffffffff;
+#endif
             }
             else
             {
+#if BYTES_PER_PIXEL == 2
                 ((unsigned char *)imFont.data)[(i + j)*sizeof(short)] = 0xff;
                 ((unsigned char *)imFont.data)[(i + j)*sizeof(short) + 1] = 0x00;
+#else
+                ((unsigned int *)imFont.data)[i+j] = 0x000000ff;
+#endif
             }
         }
 

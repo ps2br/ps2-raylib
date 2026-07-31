@@ -33,6 +33,8 @@
 *           - Android (ARM, ARM64)
 *       > PLATFORM_MEMORY
 *           - Memory framebuffer output, using software renderer, no OS required
+*       > PLATFORM_PLAYSTATION2 (PS2SDK)
+*           - Playstation 2
 *
 *   CONFIGURATION:
 *       #define SUPPORT_CAMERA_SYSTEM       1
@@ -533,6 +535,8 @@ const char *TextFormat(const char *text, ...); // Formatting of text with variab
     #include "platforms/rcore_android.c"
 #elif defined(PLATFORM_MEMORY)
     #include "platforms/rcore_memory.c"
+#elif defined(PLATFORM_PLAYSTATION2)
+    #include "platforms/rcore_playstation2.c"
 #else
     // TODO: Include your custom platform backend!
     // i.e software rendering backend or console backend!
@@ -589,6 +593,10 @@ const char *TextFormat(const char *text, ...); // Formatting of text with variab
 // Initialize window and OpenGL context
 void InitWindow(int width, int height, const char *title)
 {
+#if defined(PLATFORM_PLAYSTATION2)
+        SetTraceLogCallback(PS2_Log);
+#endif
+
     TRACELOG(LOG_INFO, "Initializing raylib %s", RAYLIB_VERSION);
 
 #if defined(PLATFORM_DESKTOP_GLFW)
@@ -609,6 +617,8 @@ void InitWindow(int width, int height, const char *title)
     TRACELOG(LOG_INFO, "Platform backend: ANDROID");
 #elif defined(PLATFORM_MEMORY)
     TRACELOG(LOG_INFO, "Platform backend: MEMORY (No OS)");
+#elif defined(PLATFORM_PLAYSTATION2)
+    TRACELOG(LOG_INFO, "Platform backend: PLAYSTATION 2");
 #else
     // TODO: Include your custom platform backend!
     // i.e software rendering backend or console backend!
@@ -725,7 +735,11 @@ void InitWindow(int width, int height, const char *title)
     SetRandomSeed(get_rand_32());
     #endif
 
+#ifdef PLATFORM_PLAYSTATION2
+    TRACELOG(LOG_INFO, "PLATFORM: App initialized with success!");
+#else
     TRACELOG(LOG_INFO, "SYSTEM: Working Directory: %s", GetWorkingDirectory());
+#endif
 }
 
 // Close window and unload OpenGL context
@@ -869,6 +883,10 @@ void BeginDrawing(void)
     // WARNING: Previously to BeginDrawing() other render textures drawing could happen,
     // consequently the measure for update vs draw is not accurate (only the total frame time is accurate)
 
+#ifdef PLATFORM_PLAYSTATION2
+    TRACELOG(LOG_ERROR, "Platform: BeginDrawing not fully implemented for PS2.");
+#endif
+
     CORE.Time.current = GetTime();      // Number of elapsed seconds since InitTimer()
     CORE.Time.update = CORE.Time.current - CORE.Time.previous;
     CORE.Time.previous = CORE.Time.current;
@@ -878,6 +896,9 @@ void BeginDrawing(void)
 
     //rlTranslatef(0.375, 0.375, 0);    // HACK to have 2D pixel-perfect drawing on OpenGL 1.1
                                         // NOTE: Not required with OpenGL 3.3+
+#ifdef PLATFORM_PLAYSTATION2
+    rlTranslatef(0.375, 0.375, 0);
+#endif
 }
 
 // End canvas (framebuffer) drawing and swap buffers (double buffering)
@@ -900,6 +921,7 @@ void EndDrawing(void)
     CORE.Time.frame = CORE.Time.update + CORE.Time.draw;
 
     // Wait for some milliseconds...
+#ifndef PLATFORM_PLAYSTATION2
     if (CORE.Time.frame < CORE.Time.target)
     {
         WaitTime(CORE.Time.target - CORE.Time.frame);
@@ -910,6 +932,7 @@ void EndDrawing(void)
 
         CORE.Time.frame += waitTime;    // Total frame time: update + draw + wait
     }
+#endif
 
     PollInputEvents();      // Poll user events (before next frame update)
 #endif
@@ -1579,10 +1602,14 @@ Vector2 GetScreenToWorld2D(Vector2 position, Camera2D camera)
 // Set target FPS (maximum)
 void SetTargetFPS(int fps)
 {
+#ifdef PLATFORM_PLAYSTATION2
+    PS2_SetTargetFPS(fps);
+#else
     if (fps < 1) CORE.Time.target = 0.0;
     else CORE.Time.target = 1.0/(double)fps;
 
     TRACELOG(LOG_INFO, "TIMER: Target time per frame: %02.03f milliseconds", (float)CORE.Time.target*1000.0f);
+#endif
 }
 
 // Get current FPS
@@ -2416,6 +2443,7 @@ bool IsFileExtension(const char *fileName, const char *ext)
 bool DirectoryExists(const char *dirPath)
 {
     bool result = false;
+#ifndef PLATFORM_PLAYSTATION2
     DIR *dir = opendir(dirPath);
 
     if (dir != NULL)
@@ -2423,7 +2451,10 @@ bool DirectoryExists(const char *dirPath)
         result = true;
         closedir(dir);
     }
-
+#else
+    // <trindadedev>: TODO: implement for PS2
+    TRACELOG(LOG_WARNING, "Platform: DirectoryExists() not implemented for PS2.");
+#endif
     return result;
 }
 
@@ -2608,8 +2639,13 @@ const char *GetWorkingDirectory(void)
     static char currentDir[MAX_FILEPATH_LENGTH] = { 0 };
     memset(currentDir, 0, MAX_FILEPATH_LENGTH);
 
+#ifndef PLATFORM_PLAYSTATION2
     char *path = GETCWD(currentDir, MAX_FILEPATH_LENGTH);
-
+#else
+    // <trindadedev>: TODO: implement for PS2
+    char *path = ".";
+    TRACELOG(LOG_WARNING, "Platform: GetWorkingDirectory not implemented for PS2.");
+#endif
     return path;
 }
 
@@ -2818,13 +2854,18 @@ int MakeDirectory(const char *dirPath)
 // Change working directory, returns true on success
 int ChangeDirectory(const char *dirPath)
 {
+#ifndef PLATFORM_PLAYSTATION2
     // NOTE: On success, CHDIR() return 0; on error, returns -1 and errno is set to indicate the error,
     // depending on the filesystem, other errors can be returned
     int result = CHDIR(dirPath);
 
     if (result != 0) TRACELOG(LOG_WARNING, "SYSTEM: Failed to change to directory: %s", dirPath);
     else TRACELOG(LOG_INFO, "SYSTEM: Working Directory: %s", dirPath);
-
+#else
+    // <trindadedev>: TODO: implement for PS2
+    int result = 1;
+    TRACELOG(LOG_WARNING, "Platform: ChangeDirectory() not implemented for PS2.");
+#endif
     return result;
 }
 
@@ -2981,6 +3022,7 @@ unsigned int GetDirectoryFileCountEx(const char *basePath, const char *filter, b
     char path[MAX_FILEPATH_LENGTH] = { 0 };
     memset(path, 0, MAX_FILEPATH_LENGTH);
 
+#ifndef PLATFORM_PLAYSTATION2
     struct dirent *entity;
     DIR *dir = opendir(basePath);
 
@@ -3017,6 +3059,9 @@ unsigned int GetDirectoryFileCountEx(const char *basePath, const char *filter, b
         closedir(dir);
     }
     else TRACELOG(LOG_WARNING, "FILEIO: Directory cannot be opened (%s)", basePath);  // Maybe it's a file...
+#else
+    // <trindadedev>: TODO: implement for PS2
+#endif
     return fileCounter;
 }
 
@@ -4290,6 +4335,9 @@ void InitTimer(void)
     else TRACELOG(LOG_WARNING, "TIMER: Hi-resolution timer not available");
 #endif
 
+#ifdef PLATFORM_PLAYSTATION2
+    CORE.Time.base = clock();
+#endif
     CORE.Time.previous = GetTime(); // Get time as double
 }
 
@@ -4306,8 +4354,12 @@ void SetupViewport(int width, int height)
     rlLoadIdentity();                   // Reset current matrix (projection)
 
     // Set orthographic projection to current framebuffer size
+#ifdef PLATFORM_PLAYSTATION2
+    rlOrtho(0, CORE.Window.display.width, CORE.Window.render.height, 0, -1.0f, 1.0f);
+#else
     // NOTE: Configured top-left corner as (0, 0)
     rlOrtho(0, CORE.Window.render.width, CORE.Window.render.height, 0, 0.0f, 1.0f);
+#endif
 
     rlMatrixMode(RL_MODELVIEW);         // Switch back to modelview matrix
     rlLoadIdentity();                   // Reset current matrix (modelview)
@@ -4322,6 +4374,7 @@ static void ScanDirectoryFiles(const char *basePath, FilePathList *files, const 
     char path[MAX_FILEPATH_LENGTH] = { 0 };
     memset(path, 0, MAX_FILEPATH_LENGTH);
 
+#ifndef PLATFORM_PLAYSTATION2
     struct dirent *dp = NULL;
     DIR *dir = opendir(basePath);
 
@@ -4367,6 +4420,9 @@ static void ScanDirectoryFiles(const char *basePath, FilePathList *files, const 
         closedir(dir);
     }
     else TRACELOG(LOG_WARNING, "FILEIO: Directory cannot be opened (%s)", basePath);  // Maybe it's a file...
+#else
+    // <trindadedev>: TODO: implement for PS2
+#endif
 }
 
 #if SUPPORT_AUTOMATION_EVENTS

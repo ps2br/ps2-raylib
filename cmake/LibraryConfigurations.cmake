@@ -230,6 +230,19 @@ elseif ("${PLATFORM}" STREQUAL "Memory")
     if(WIN32 OR CMAKE_C_COMPILER MATCHES "mingw|mingw32|mingw64")
         set(LIBS_PRIVATE winmm)
     endif()
+elseif ("${PLATFORM}" STREQUAL "PS2")
+    set(PLATFORM_CPP "PLATFORM_PLAYSTATION2")
+    set(GRAPHICS     "GRAPHICS_API_OPENGL_11")
+
+    # Disable AUDIO
+    # TODO: implement raylib Audio with PS2 drivers
+    set(SUPPORT_MODULE_RAUDIO OFF)
+    set(USE_AUDIO OFF)
+
+    # Disable Models
+    # TODO: fix M3D errors
+    set(SUPPORT_MODULE_RMODELS OFF)
+    set(USE_MODELS OFF)
 endif ()
 
 if (NOT ${OPENGL_VERSION} MATCHES "OFF")

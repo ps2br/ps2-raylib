@@ -4434,7 +4434,12 @@ static Model LoadOBJ(const char *fileName)
     char currentDir[MAX_FILEPATH_LENGTH] = { 0 };
     snprintf(currentDir, MAX_FILEPATH_LENGTH, "%s", GetWorkingDirectory()); // Save current working directory
     const char *workingDir = GetDirectoryPath(fileName); // Switch to OBJ directory for material path correctness
+
+#ifndef PLATFORM_PLAYSTATION2
     if (CHDIR(workingDir) != 0) TRACELOG(LOG_WARNING, "MODEL: [%s] Failed to change working directory", workingDir);
+#else
+    // <trindadedev>: TODO: implement for PS2
+#endif
 
     unsigned int dataSize = (unsigned int)strlen(fileText);
 
@@ -4646,12 +4651,15 @@ static Model LoadOBJ(const char *fileName)
     tinyobj_shapes_free(objShapes, objShapeCount);
     tinyobj_materials_free(objMaterials, objMaterialCount);
 
+#ifndef PLATFORM_PLAYSTATION2
     // Restore current working directory
     if (CHDIR(currentDir) != 0)
     {
         TRACELOG(LOG_WARNING, "MODEL: [%s] Failed to change working directory", currentDir);
     }
-
+#else
+    // <trindadedev>: TODO: implement for PS2
+#endif
     return model;
 }
 #endif

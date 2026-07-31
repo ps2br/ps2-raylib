@@ -130,13 +130,13 @@ extern "C" {            // Prevents name mangling of functions
 #endif
 
 // Load image data from memory data files
-RLGPUTEXAPI void *rl_load_dds_from_memory(const unsigned char *file_data, unsigned int file_size, int *width, int *height, int *format, int *mips);
-RLGPUTEXAPI void *rl_load_pkm_from_memory(const unsigned char *file_data, unsigned int file_size, int *width, int *height, int *format, int *mips);
-RLGPUTEXAPI void *rl_load_ktx_from_memory(const unsigned char *file_data, unsigned int file_size, int *width, int *height, int *format, int *mips);
-RLGPUTEXAPI void *rl_load_pvr_from_memory(const unsigned char *file_data, unsigned int file_size, int *width, int *height, int *format, int *mips);
-RLGPUTEXAPI void *rl_load_astc_from_memory(const unsigned char *file_data, unsigned int file_size, int *width, int *height, int *format, int *mips);
-
-RLGPUTEXAPI int rl_save_ktx_to_memory(const char *fileName, void *data, int width, int height, int format, int mipmaps);  // Save image data as KTX file
+// <trindadedev>: renamed the 'mips'(mipmaps) paramether to mipmaps to fix conflicts with 'mips' macro
+RLGPUTEXAPI void *rl_load_dds_from_memory(const unsigned char *file_data, unsigned int file_size, int *width, int *height, int *format, int *mipmaps);
+RLGPUTEXAPI void *rl_load_pkm_from_memory(const unsigned char *file_data, unsigned int file_size, int *width, int *height, int *format, int *mipmaps);
+RLGPUTEXAPI void *rl_load_ktx_from_memory(const unsigned char *file_data, unsigned int file_size, int *width, int *height, int *format, int *mipmaps);
+RLGPUTEXAPI void *rl_load_pvr_from_memory(const unsigned char *file_data, unsigned int file_size, int *width, int *height, int *format, int *mipmaps);
+RLGPUTEXAPI void *rl_load_astc_from_memory(const unsigned char *file_data, unsigned int file_size, int *width, int *height, int *format, int *mipmaps);
+RLGPUTEXAPI int  rl_save_ktx_to_memory(const char *fileName, void *data, int width, int height, int format, int mipmaps);  // Save image data as KTX file
 
 #if defined(__cplusplus)
 }
@@ -209,7 +209,8 @@ void get_gl_texture_formats(int format, unsigned int *gl_internal_format, unsign
 //----------------------------------------------------------------------------------
 #if defined(RLTEXGPU_SUPPORT_DDS)
 // Loading DDS from memory image data (compressed or uncompressed)
-void *rl_load_dds_from_memory(const unsigned char *file_data, unsigned int file_size, int *width, int *height, int *format, int *mips)
+// <trindadedev>: renamed the 'mips'(mipmaps) paramether to mipmaps to fix conflicts with 'mips' macro
+void *rl_load_dds_from_memory(const unsigned char *file_data, unsigned int file_size, int *width, int *height, int *format, int *mipmaps)
 {
     void *image_data = RLTEXGPU_NULL;  // Image data pointer
     int image_pixel_size = 0;           // Image pixel size
@@ -283,8 +284,8 @@ void *rl_load_dds_from_memory(const unsigned char *file_data, unsigned int file_
 
             image_pixel_size = header->width*header->height;
 
-            if (header->mipmap_count == 0) *mips = 1;   // Parameter not used
-            else *mips = header->mipmap_count;
+            if (header->mipmap_count == 0) *mipmaps = 1;   // Parameter not used
+            else *mipmaps = header->mipmap_count;
 
             if (header->ddspf.rgb_bit_count == 16)      // 16bit mode, no compressed
             {
@@ -409,7 +410,8 @@ void *rl_load_dds_from_memory(const unsigned char *file_data, unsigned int file_
 // Loading PKM image data (ETC1/ETC2 compression)
 // NOTE: KTX is the standard Khronos Group compression format (ETC1/ETC2, mipmaps)
 // PKM is a much simpler file format used mainly to contain a single ETC1/ETC2 compressed image (no mipmaps)
-void *rl_load_pkm_from_memory(const unsigned char *file_data, unsigned int file_size, int *width, int *height, int *format, int *mips)
+// <trindadedev>: renamed the 'mips'(mipmaps) paramether to mipmaps to fix conflicts with 'mips' macro
+void *rl_load_pkm_from_memory(const unsigned char *file_data, unsigned int file_size, int *width, int *height, int *format, int *mipmaps)
 {
     void *image_data = RLTEXGPU_NULL;        // Image data pointer
 
@@ -461,7 +463,7 @@ void *rl_load_pkm_from_memory(const unsigned char *file_data, unsigned int file_
 
             *width = header->width;
             *height = header->height;
-            *mips = 1;
+            *mipmaps = 1;
 
             int bpp = 4;
             if (header->format == 3) bpp = 8;
@@ -485,7 +487,8 @@ void *rl_load_pkm_from_memory(const unsigned char *file_data, unsigned int file_
 #if defined(RLTEXGPU_SUPPORT_KTX)
 // Load KTX compressed image data (ETC1/ETC2 compression)
 // TODO: Review KTX loading, many things changed!
-void *rl_load_ktx_from_memory(const unsigned char *file_data, unsigned int file_size, int *width, int *height, int *format, int *mips)
+// <trindadedev>: renamed the 'mips'(mipmaps) paramether to mipmaps to fix conflicts with 'mips' macro
+void *rl_load_ktx_from_memory(const unsigned char *file_data, unsigned int file_size, int *width, int *height, int *format, int *mipmaps)
 {
     void *image_data = RLTEXGPU_NULL;        // Image data pointer
 
@@ -540,7 +543,7 @@ void *rl_load_ktx_from_memory(const unsigned char *file_data, unsigned int file_
 
             *width = header->width;
             *height = header->height;
-            *mips = header->mipmap_levels;
+            *mipmaps = header->mipmap_levels;
 
             file_data_ptr += header->key_value_data_size; // Skip value data size
 
@@ -565,6 +568,7 @@ void *rl_load_ktx_from_memory(const unsigned char *file_data, unsigned int file_
 // Save image data as KTX file
 // NOTE: By default KTX 1.1 spec is used, 2.0 is still on draft (01Oct2018)
 // TODO: Review KTX saving, many things changed!
+// <trindadedev>: renamed the 'mips'(mipmaps) paramether to mipmaps to fix conflicts with 'mips' macro
 int rl_save_ktx(const char *file_name, void *data, int width, int height, int format, int mipmaps)
 {
     // KTX file Header (64 bytes)
@@ -699,7 +703,8 @@ int rl_save_ktx(const char *file_name, void *data, int width, int height, int fo
 #if defined(RLTEXGPU_SUPPORT_PVR)
 // Loading PVR image data (uncompressed or PVRT compression)
 // NOTE: PVR v2 not supported, use PVR v3 instead
-void *rl_load_pvr_from_memory(const unsigned char *file_data, unsigned int file_size, int *width, int *height, int *format, int *mips)
+// <trindadedev>: renamed the 'mips'(mipmaps) paramether to mipmaps to fix conflicts with 'mips' macro
+void *rl_load_pvr_from_memory(const unsigned char *file_data, unsigned int file_size, int *width, int *height, int *format, int *mipmaps)
 {
     void *image_data = RLTEXGPU_NULL;        // Image data pointer
 
@@ -779,7 +784,7 @@ void *rl_load_pvr_from_memory(const unsigned char *file_data, unsigned int file_
 
                 *width = header->width;
                 *height = header->height;
-                *mips = header->num_mipmaps;
+                *mipmaps = header->num_mipmaps;
 
                 // Check data format
                 if (((header->channels[0] == 'l') && (header->channels[1] == 0)) && (header->channel_depth[0] == 8)) *format = RLTEXGPU_PIXELFORMAT_UNCOMPRESSED_GRAYSCALE;
@@ -834,7 +839,8 @@ void *rl_load_pvr_from_memory(const unsigned char *file_data, unsigned int file_
 
 #if defined(RLTEXGPU_SUPPORT_ASTC)
 // Load ASTC compressed image data (ASTC compression)
-void *rl_load_astc_from_memory(const unsigned char *file_data, unsigned int file_size, int *width, int *height, int *format, int *mips)
+// <trindadedev>: renamed the 'mips'(mipmaps) paramether to mipmaps to fix conflicts with 'mips' macro
+void *rl_load_astc_from_memory(const unsigned char *file_data, unsigned int file_size, int *width, int *height, int *format, int *mipmaps)
 {
     void *image_data = RLTEXGPU_NULL;        // Image data pointer
 
@@ -874,7 +880,7 @@ void *rl_load_astc_from_memory(const unsigned char *file_data, unsigned int file
             // NOTE: Assuming Little Endian (could it be wrong?)
             *width = 0x00000000 | ((int)header->width[2] << 16) | ((int)header->width[1] << 8) | ((int)header->width[0]);
             *height = 0x00000000 | ((int)header->height[2] << 16) | ((int)header->height[1] << 8) | ((int)header->height[0]);
-            *mips = 1;      // NOTE: ASTC format only contains one mipmap level
+            *mipmaps = 1;      // NOTE: ASTC format only contains one mipmap level
 
             // NOTE: Each block is always stored in 128bit so we can calculate the bpp
             int bpp = 128/(header->blockX*header->blockY);

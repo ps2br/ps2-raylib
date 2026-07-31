@@ -6,6 +6,13 @@ set(API_VERSION 600)
 include(GNUInstallDirs)
 include(JoinPaths)
 
+# Sets additional platform options and link libraries for each platform
+# also selects the proper graphics API and version for that platform
+# Produces a variable LIBS_PRIVATE that will be used later
+# <trindadedev>: moved to top to setup the platforms before everything
+#   when PS2 it may disable AUDIO and 3D Models.
+include(LibraryConfigurations)
+
 # Sets build type if not set by now
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     if(PROJECT_IS_TOP_LEVEL)
@@ -50,11 +57,6 @@ endif()
 if (NOT ${PLATFORM} MATCHES "Web")
     include(GlfwImport)
 endif ()
-
-# Sets additional platform options and link libraries for each platform
-# also selects the proper graphics API and version for that platform
-# Produces a variable LIBS_PRIVATE that will be used later
-include(LibraryConfigurations)
 
 if (DEFINED SUPPORT_MODULE_RAUDIO AND NOT SUPPORT_MODULE_RAUDIO)
     MESSAGE(STATUS "Audio Backend: None (-DCUSTOMIZE_BUILD=ON -DSUPPORT_MODULE_RAUDIO=OFF)")

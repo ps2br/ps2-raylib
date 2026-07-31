@@ -755,6 +755,11 @@ RLAPI void rlDrawVertexArrayInstanced(int offset, int count, int instances); // 
 RLAPI void rlDrawVertexArrayElementsInstanced(int offset, int count, const void *buffer, int instances); // Draw vertex array elements with instancing
 
 // Textures management
+// <trindadedev>: TODO: implement for PS2
+#ifdef PLATFORM_PLAYSTATION2
+void PS2_rlLoadTexture(unsigned int id, const void *data, int width, int height);
+#endif
+
 RLAPI unsigned int rlLoadTexture(const void *data, int width, int height, int format, int mipmapCount); // Load texture data
 RLAPI unsigned int rlLoadTextureDepth(int width, int height, bool useRenderBuffer); // Load depth texture/renderbuffer (to be attached to fbo)
 RLAPI unsigned int rlLoadTextureCubemap(const void *data, int size, int format, int mipmapCount); // Load texture cubemap data
@@ -1999,13 +2004,24 @@ void rlDisablePointMode(void)
 }
 
 // Set the line drawing width
-void rlSetLineWidth(float width) { glLineWidth(width); }
+void rlSetLineWidth(float width)
+{
+#ifndef PLATFORM_PLAYSTATION2
+    glLineWidth(width);
+#else
+    // <trindadedev>: TODO: implement for PS2
+#endif
+}
 
 // Get the line drawing width
 float rlGetLineWidth(void)
 {
     float width = 0;
+#ifndef PLATFORM_PLAYSTATION2
     glGetFloatv(GL_LINE_WIDTH, &width);
+#else
+    // <trindadedev>: TODO: implement for PS2
+#endif
     return width;
 }
 
@@ -2013,7 +2029,11 @@ float rlGetLineWidth(void)
 void rlSetPointSize(float size)
 {
 #if defined(GRAPHICS_API_OPENGL_11)
+#ifndef PLATFORM_PLAYSTATION2
     glPointSize(size);
+#else
+    // <trindadedev>: TODO: implement for PS2
+#endif
 #endif
 }
 
@@ -2022,7 +2042,9 @@ float rlGetPointSize(void)
 {
     float size = 1;
 #if defined(GRAPHICS_API_OPENGL_11)
+#ifndef PLAPLATFORM_PLAYSTATION2
     glGetFloatv(GL_POINT_SIZE, &size);
+#endif
 #endif
     return size;
 
@@ -2328,8 +2350,15 @@ void rlglInit(int width, int height)
     // Init state: Culling
     // NOTE: All shapes/models triangles are drawn CCW
     glCullFace(GL_BACK);                                    // Cull the back face (default)
+#ifndef PLATFORM_PLAYSTATION2
     glFrontFace(GL_CCW);                                    // Front face are defined counter clockwise (default)
     glEnable(GL_CULL_FACE);                                 // Enable backface culling
+#else
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_NORMAL_ARRAY);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    glEnable(GL_RESCALE_NORMAL);
+#endif
 
 #if defined(GRAPHICS_API_OPENGL_11)
     // Init state: Color hints (deprecated in OpenGL 3.0+)
@@ -3386,6 +3415,11 @@ unsigned int rlLoadTexture(const void *data, int width, int height, int format, 
     }
 #endif
 
+#ifdef PLATFORM_PLAYSTATION2
+    PS2_rlLoadTexture(id, data, width, height);
+    TRACELOG(RL_LOG_INFO, "TEXTURE: [ID %u] PS2 %dx%d RGBA(8)", id, width, height);
+#endif
+
     // At this point texture is loaded in GPU and texture parameters configured
 
     // NOTE: If mipmaps were not in data, they are not generated automatically
@@ -3726,7 +3760,11 @@ void *rlReadTexturePixels(unsigned int id, int width, int height, int format)
     if ((glInternalFormat != 0) && (format < RL_PIXELFORMAT_COMPRESSED_DXT1_RGB))
     {
         pixels = RL_CALLOC(size, 1);
+#ifndef PLATFORM_PLAYSTATION2
         glGetTexImage(GL_TEXTURE_2D, 0, glFormat, glType, pixels);
+#else
+        // <trindadedev>: TODO: implement for PS2
+#endif
     }
     else TRACELOG(RL_LOG_WARNING, "TEXTURE: [ID %i] Data retrieval not suported for pixel format (%i)", id, format);
 
